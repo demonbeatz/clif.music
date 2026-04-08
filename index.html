@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>CLIF Music</title>
+
+<!-- PWA Meta -->
+<meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="manifest.json">
+
+<style>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin:0; padding:0; }
+body {
+  font-family: Arial, sans-serif;
+  color: white;
+  background: linear-gradient(rgba(0,0,0,.7), rgba(0,0,0,.9)), url('background.jpg') no-repeat center/cover fixed;
+}
+
+header {
+  background: rgba(15,23,42,.95);
+  padding: 12px 16px;
+  display:flex; align-items:center; justify-content:space-between;
+  position: sticky; top:0; z-index:1000;
+  backdrop-filter: blur(8px);
+}
+.logo { font-weight:bold; font-size:20px; }
+.profile {
+  width:40px; height:40px; border-radius:50%; object-fit:cover;
+  border:2px solid #38bdf8;
+}
+
+.container { max-width:900px; margin:auto; padding: 16px; }
+
+.search-box { text-align:center; margin-top:10px; }
+input {
+  width:100%; max-width:520px;
+  padding:12px; border-radius:10px; border:none; outline:none;
+}
+button {
+  padding:10px 14px; margin-top:8px;
+  border:none; border-radius:10px; background:#38bdf8; color:#000; font-weight:bold;
+}
+button:active { transform: scale(.97); }
+
+.grid {
+  display:grid; grid-template-columns: 1fr; gap:14px; margin-top:16px;
+}
+@media(min-width:640px){ .grid { grid-template-columns: 1fr 1fr; } }
+@media(min-width:900px){ .grid { grid-template-columns: 1fr 1fr 1fr; } }
+
+.song {
+  background: rgba(30,41,59,.9);
+  padding:12px; border-radius:12px;
+}
+.song strong { display:block; }
+.song small { opacity:.8; }
+
+audio { width:100%; margin-top:8px; }
+
+.upload { text-align:center; margin-top:20px; }
+
+.fab {
+  position: fixed; bottom:18px; right:18px;
+}
+
+.status { text-align:center; opacity:.8; margin-top:10px; }
+
+footer { text-align:center; padding:14px; opacity:.7; font-size:13px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">CLIF MUSIC 🎵</div>
+  <img src="profile.png" class="profile" alt="profile">
+</header>
+
+<div class="container">
+
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="Search songs or artists...">
+    <br>
+    <button onclick="searchMusic()">Search</button>
+  </div>
+
+  <div class="upload">
+    <h3>Upload MP3</h3>
+    <input type="file" id="uploadFile" accept="audio/mp3">
+    <br>
+    <button onclick="uploadMP3()">Upload</button>
+  </div>
+
+  <div class="status" id="status"></div>
+  <div class="grid" id="results"></div>
+
+</div>
+
+<footer>© 2026 CLIF Music • Built by Demon Beatz</footer>
+
+<!-- Background Music (user interaction only) -->
+<audio id="bgMusic" src="background.mp3" loop></audio>
+<button class="fab" onclick="toggleMusic()">🔊</button>
+
+<script>
+// Primary + fallback APIs (fix mobile network blocking)
+const API_URL = "https://itunes.apple.com/search?media=music&limit=12&term=";
+const FALLBACK_API = "https://corsproxy.io/?https://itunes.apple.com/search?media=music&limit=12&term=";
+
+function setStatus(msg){ document.getElementById('status').innerText = msg || ''; }
+
+async function searchMusic() {
+  const query = document.getElementById('searchInput').value.trim();
+  const resultsDiv = document.getElementById('results');
+
+  if (!query) return setStatus('Type something to search');
+
+  setStatus('Searching...');
+  resultsDiv.innerHTML = '';
+
+  try {
+    let res = await fetch(API_URL + encodeURIComponent(query));
+
+    if (!res.ok) {
+      res = await fetch(FALLBACK_API + encodeURIComponent(query));
+    }
+
+    const data = await res.json();
+
+    setStatus('');
+
+    if (!data.results || !data.results.length) {
+      setStatus('No results found');
+      return;
+    }
+
+    data.results.forEach(song => {
+      const div = document.createElement('div');
+      div.className = 'song';
+
+      div.innerHTML = `
+        <strong>${song.trackName || 'Unknown'}</strong>
+        <small>${song.artistName || 'Unknown Artist'}</small>
+        <audio controls preload="none" src="${song.previewUrl}"></audio>
+        <br>
+        <a href="${song.previewUrl}" download>
+          <button>Download</button>
+        </a>
+      `;
+
+      resultsDiv.appendChild(div);
+    });
+
+  } catch (e) {
+    console.error(e);
+    setStatus('Network blocked. Try VPN or deploy backend.');
+  }
+}
+
+// OLD FUNCTION REMOVED BELOW
+//
+  const query = document.getElementById('searchInput').value.trim();
+  const resultsDiv = document.getElementById('results');
+
+  if (!query) return setStatus('Type something to search');
+
+  setStatus('Searching...');
+  resultsDiv.innerHTML = '';
+
+  try {
+    const res = await fetch(API_URL + encodeURIComponent(query));
+    if (!res.ok) throw new Error('Network');
+
+    const data = await res.json();
+    setStatus('');
+
+    if (!data.results || !data.results.length) {
+      setStatus('No results found');
+      return;
+    }
+
+    data.results.forEach(song => {
+      const div = document.createElement('div');
+      div.className = 'song';
+
+      div.innerHTML = `
+        <strong>${song.trackName || 'Unknown'}</strong>
+        <small>${song.artistName || 'Unknown Artist'}</small>
+        <audio controls preload="none" src="${song.previewUrl}"></audio>
+        <br>
+        <a href="${song.previewUrl}" download>
+          <button>Download</button>
+        </a>
+      `;
+
+      resultsDiv.appendChild(div);
+    });
+
+  } catch (e) {
+    setStatus('Connection problem. Check internet or try again.');
+  }
+}
+
+function uploadMP3() {
+  const file = document.getElementById('uploadFile').files[0];
+  if (!file) return alert('Select an MP3 first');
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const div = document.createElement('div');
+    div.className = 'song';
+
+    div.innerHTML = `
+      <strong>${file.name}</strong>
+      <audio controls src="${e.target.result}"></audio>
+      <br>
+      <a href="${e.target.result}" download="${file.name}">
+        <button>Download</button>
+      </a>
+    `;
+
+    document.getElementById('results').prepend(div);
+  };
+
+  reader.readAsDataURL(file);
+}
+
+function toggleMusic(){
+  const m = document.getElementById('bgMusic');
+  m.paused ? m.play() : m.pause();
+}
+
+// Fix mobile autoplay restriction
+window.addEventListener('click', () => {
+  const m = document.getElementById('bgMusic');
+  if (m.paused) m.play();
+}, { once:true });
+
+// Detect offline
+window.addEventListener('offline', () => setStatus('You are offline'));
+window.addEventListener('online', () => setStatus('Back online'));
+
+// Register Service Worker (for reliability)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+
+</body>
+</html>
